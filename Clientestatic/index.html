@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Tareas - SPA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        #taskInput {
+            width: 70%;
+            padding: 10px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #taskList {
+            margin-top: 20px;
+        }
+        .task-item {
+            background-color: white;
+            margin-bottom: 10px;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 5px;
+        }
+        .task-item.completed {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <h1>Lista de Tareas - SPA</h1>
+    <div>
+        <input type="text" id="taskInput" placeholder="Nueva tarea">
+        <button onclick="addTask()">Agregar Tarea</button>
+    </div>
+    <div id="taskList"></div>
+
+    <script>
+        // Estado de la aplicación
+        let tasks = [];
+
+        // Funciones para manipular el DOM
+        function renderTasks() {
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = '';
+            tasks.forEach(task => {
+                const taskElement = document.createElement('div');
+                taskElement.className = `task-item ${task.completed ? 'completed' : ''}`;
+                taskElement.innerHTML = `
+                    <span>${task.task}</span>
+                    <div>
+                        <button onclick="toggleTask(${task.id})">${task.completed ? 'Desmarcar' : 'Completar'}</button>
+                        <button onclick="deleteTask(${task.id})">Eliminar</button>
+                    </div>
+                `;
+                taskList.appendChild(taskElement);
+            });
+        }
+
+        // Funciones para interactuar con la API
+        async function fetchTasks() {
+            const response = await fetch('/api/tasks');
+            tasks = await response.json();
+            renderTasks();
+        }
+
+        async function addTask() {
+            const taskInput = document.getElementById('taskInput');
+            const task = taskInput.value.trim();
+            if (task) {
+                const response = await fetch('/api/tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ task }),
+                });
+                const newTask = await response.json();
+                tasks.push(newTask);
+                taskInput.value = '';
+                renderTasks();
+            }
+        }
+
+        async function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            const updatedStatus = !task.completed;
+            await fetch(`/api/tasks/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ completed: updatedStatus }),
+            });
+            task.completed = updatedStatus;
+            renderTasks();
+        }
+
+        async function deleteTask(id) {
+            await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+            tasks = tasks.filter(t => t.id !== id);
+            renderTasks();
+        }
+
+        // Inicializar la aplicación
+        fetchTasks();
+    </script>
+</body>
+</html>
